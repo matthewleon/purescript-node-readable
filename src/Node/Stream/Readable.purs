@@ -28,7 +28,7 @@ derive instance newtypeReadable :: Newtype (Readable chunktype r eff) _
 
 foreign import kind Region
 
--- | We use a phantom parameter to contain use of push methods.
+-- | We use a phantom parameter to contain use of `push`
 foreign import data Push :: Region -> Effect
 
 type Size = Int
