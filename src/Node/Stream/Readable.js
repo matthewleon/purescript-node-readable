@@ -21,7 +21,7 @@ exports.pushImpl = function (rs) {
       return rs.push(chunk);
     };
   };
-}
+};
 
 exports.pushStringWithEncodingImpl = function (rs) {
   return function (string) {

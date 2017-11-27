@@ -16,7 +16,9 @@ module Node.Stream.Readable (
 import Prelude
 
 import Control.Monad.Eff (Eff, kind Effect)
+import Control.Monad.Eff.Exception (Error)
 import Data.ArrayBuffer.Types (Uint8Array)
+import Data.Function.Uncurried (Fn2)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Node.Buffer (Buffer)
 import Node.Encoding (Encoding)
@@ -39,9 +41,9 @@ type ReadCb chunktype r p eff
   -> Size
   -> Eff (push :: Push p | eff) Unit
 
-type StreamOptions = (
+type StreamOptions eff = (
   highWaterMark :: Int
--- TODO, destroy :: 
+, destroy :: Fn2 Error (Eff eff Unit) (Eff eff Unit)
 )
 
 newStringReadable
@@ -52,7 +54,7 @@ newStringReadable = newReadable {}
 
 newStringReadable'
   :: forall optionsrow rest r p eff
-   . Union optionsrow rest StreamOptions
+   . Union optionsrow rest (StreamOptions eff)
   => { | optionsrow}
   -> ReadCb String r p eff
   -> Eff eff (Readable String r eff)
@@ -66,7 +68,7 @@ newBufferReadable = newReadable {}
 
 newBufferReadable'
   :: forall optionsrow rest r p eff
-   . Union optionsrow rest StreamOptions
+   . Union optionsrow rest (StreamOptions eff)
   => { | optionsrow}
   -> ReadCb Buffer r p eff
   -> Eff eff (Readable Buffer r eff)
@@ -80,7 +82,7 @@ newUint8ArrayReadable = newReadable {}
 
 newUint8ArrayReadable'
   :: forall optionsrow rest r p eff
-   . Union optionsrow rest StreamOptions
+   . Union optionsrow rest (StreamOptions eff)
   => { | optionsrow}
   -> ReadCb Uint8Array r p eff
   -> Eff eff (Readable Uint8Array r eff)
@@ -88,7 +90,7 @@ newUint8ArrayReadable' = newReadable
 
 newReadable
   :: forall optionsrow rest chunktype r p eff
-   . Union optionsrow rest StreamOptions
+   . Union optionsrow rest (StreamOptions eff)
   => { | optionsrow}
   -> ReadCb chunktype r p eff
   -> Eff eff (Readable chunktype r eff)
