@@ -14,7 +14,8 @@
   "dependencies": {
     "purescript-node-streams": "^3.2.0",
     "purescript-arraybuffer-types": "^2.0.0",
-    "purescript-newtype": "^2.0.0"
+    "purescript-newtype": "^2.0.0",
+    "purescript-record": "^0.2.5"
   },
   "devDependencies": {
     "purescript-st": "^3.0.0",

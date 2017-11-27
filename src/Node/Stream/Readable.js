@@ -2,14 +2,16 @@
 
 var stream = require("stream");
 
-exports.newReadableImpl = function (readCb) {
-  return function() {
-    var s = new stream.Readable({
-      read: function(length) {
-        readCb(s)(length)();
-      }
-    });
-    return s;
+exports.newReadableImpl = function(options) {
+  return function (readCb) {
+    return function() {
+      var s = new stream.Readable(Object.assign({}, options, {
+        read: function(length) {
+          readCb(s)(length)();
+        }
+      }));
+      return s;
+    };
   };
 };
 

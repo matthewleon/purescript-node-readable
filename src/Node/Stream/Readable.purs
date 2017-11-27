@@ -39,33 +39,65 @@ type ReadCb chunktype r p eff
   -> Size
   -> Eff (push :: Push p | eff) Unit
 
+type StreamOptions = (
+  highWaterMark :: Int
+-- TODO, destroy :: 
+)
+
 newStringReadable
   :: forall r p eff
    . ReadCb String r p eff
   -> Eff eff (Readable String r eff)
-newStringReadable = newReadable
+newStringReadable = newReadable {}
+
+newStringReadable'
+  :: forall optionsrow rest r p eff
+   . Union optionsrow rest StreamOptions
+  => { | optionsrow}
+  -> ReadCb String r p eff
+  -> Eff eff (Readable String r eff)
+newStringReadable' = newReadable
 
 newBufferReadable
   :: forall r p eff
    . ReadCb Buffer r p eff
   -> Eff eff (Readable Buffer r eff)
-newBufferReadable = newReadable
+newBufferReadable = newReadable {}
+
+newBufferReadable'
+  :: forall optionsrow rest r p eff
+   . Union optionsrow rest StreamOptions
+  => { | optionsrow}
+  -> ReadCb Buffer r p eff
+  -> Eff eff (Readable Buffer r eff)
+newBufferReadable' = newReadable
 
 newUint8ArrayReadable
   :: forall r p eff
    . ReadCb Uint8Array r p eff
   -> Eff eff (Readable Uint8Array r eff)
-newUint8ArrayReadable = newReadable
+newUint8ArrayReadable = newReadable {}
+
+newUint8ArrayReadable'
+  :: forall optionsrow rest r p eff
+   . Union optionsrow rest StreamOptions
+  => { | optionsrow}
+  -> ReadCb Uint8Array r p eff
+  -> Eff eff (Readable Uint8Array r eff)
+newUint8ArrayReadable' = newReadable
 
 newReadable
-  :: forall chunktype r p eff
-   . ReadCb chunktype r p eff
+  :: forall optionsrow rest chunktype r p eff
+   . Union optionsrow rest StreamOptions
+  => { | optionsrow}
+  -> ReadCb chunktype r p eff
   -> Eff eff (Readable chunktype r eff)
-newReadable = map wrap <<< newReadableImpl
+newReadable r = map wrap <<< newReadableImpl r
 
 foreign import newReadableImpl
-  :: forall chunktype r p eff
-   . ReadCb chunktype r p eff
+  :: forall optionsrow chunktype r p eff
+   . { | optionsrow}
+  -> ReadCb chunktype r p eff
   -> Eff eff (S.Readable r eff)
 
 push
