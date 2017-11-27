@@ -1,0 +1,17 @@
+{
+  "private": true,
+  "scripts": {
+    "clean": "rimraf output && rimraf .pulp-cache",
+    "build": "eslint src && pulp build -- --censor-lib --strict",
+    "examples:build": "eslint examples && pulp build -I examples -- --censor-lib --strict",
+    "examples:yes": "eslint examples && pulp run -I examples -m Yes",
+    "examples:count": "eslint examples && pulp run -I examples -m Count"
+  },
+  "devDependencies": {
+    "eslint": "^4.11.0",
+    "pulp": "^12.0.1",
+    "purescript-psa": "^0.5.1",
+    "rimraf": "^2.6.2",
+    "stream-buffers": "^3.0.1"
+  }
+}

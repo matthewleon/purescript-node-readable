@@ -1,0 +1,22 @@
+{
+  "name": "purescript-node-readable",
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/purescript-node/purescript-node-readable.git"
+  },
+  "dependencies": {
+    "purescript-node-streams": "^3.2.0",
+    "purescript-arraybuffer-types": "^2.0.0"
+  },
+  "devDependencies": {
+    "purescript-st": "^3.0.0",
+    "purescript-console": "^3.0.0"
+  }
+}
