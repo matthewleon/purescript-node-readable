@@ -5,8 +5,11 @@ module Node.Stream.Readable (
 , Size
 , Push
 , newStringReadable
+, newStringReadable'
 , newBufferReadable
+, newBufferReadable'
 , newUint8ArrayReadable
+, newUint8ArrayReadable'
 , push
 , pushStringWithEncoding
 , pushEnd
