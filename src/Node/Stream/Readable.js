@@ -2,7 +2,7 @@
 
 var stream = require("stream");
 
-exports.newReadable = function (readCb) {
+exports.newReadableImpl = function (readCb) {
   return function() {
     var s = new stream.Readable({
       read: function(length) {
@@ -13,28 +13,24 @@ exports.newReadable = function (readCb) {
   };
 };
 
-function pushChunk(s) {
+exports.pushImpl = function (rs) {
   return function (chunk) {
     return function() {
-      return s.push(chunk);
+      return rs.push(chunk);
     };
   };
 }
 
-exports.pushBuffer = pushChunk;
-
-exports.pushUint8Array = pushChunk;
-
-exports.pushString = pushChunk;
-
-exports.pushStringWithEncodingImpl = function (s) {
+exports.pushStringWithEncodingImpl = function (rs) {
   return function (string) {
     return function (encoding) {
       return function() {
-        return s.push(string, encoding);
+        return rs.push(string, encoding);
       };
     };
   };
 };
 
-exports.pushEnd = pushChunk(null);
+exports.pushEndImpl = function(rs) {
+  exports.pushImpl(rs)(null);
+};

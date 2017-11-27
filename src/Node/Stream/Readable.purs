@@ -1,23 +1,30 @@
 module Node.Stream.Readable (
-  kind Region
+  Readable
+, kind Region
 , ReadCb
 , Size
 , Push
-, newReadable
-, pushBuffer
-, pushUint8Array
-, pushString
+, newStringReadable
+, newBufferReadable
+, newUint8ArrayReadable
+, push
 , pushStringWithEncoding
 , pushEnd
+, pipe
 ) where
 
 import Prelude
 
 import Control.Monad.Eff (Eff, kind Effect)
 import Data.ArrayBuffer.Types (Uint8Array)
+import Data.Newtype (class Newtype, unwrap, wrap)
 import Node.Buffer (Buffer)
 import Node.Encoding (Encoding)
-import Node.Stream (Readable)
+import Node.Stream (Readable, Writable, pipe) as S
+
+-- | A readable stream parameterized by the type of its chunks
+newtype Readable chunktype r eff = Readable (S.Readable r eff)
+derive instance newtypeReadable :: Newtype (Readable chunktype r eff) _
 
 foreign import kind Region
 
@@ -27,47 +34,82 @@ foreign import data Push :: Region -> Effect
 type Size = Int
 
 -- | The read callback for readable streams
-type ReadCb r p eff
-   = Readable r eff
+type ReadCb chunktype r p eff
+   = Readable chunktype r eff
   -> Size
   -> Eff (push :: Push p | eff) Unit
 
-foreign import newReadable
+newStringReadable
   :: forall r p eff
-   . ReadCb r p eff
-  -> Eff eff (Readable r eff)
+   . ReadCb String r p eff
+  -> Eff eff (Readable String r eff)
+newStringReadable = newReadable
 
-foreign import pushBuffer
+newBufferReadable
   :: forall r p eff
-   . Readable r eff
-  -> Buffer
+   . ReadCb Buffer r p eff
+  -> Eff eff (Readable Buffer r eff)
+newBufferReadable = newReadable
+
+newUint8ArrayReadable
+  :: forall r p eff
+   . ReadCb Uint8Array r p eff
+  -> Eff eff (Readable Uint8Array r eff)
+newUint8ArrayReadable = newReadable
+
+newReadable
+  :: forall chunktype r p eff
+   . ReadCb chunktype r p eff
+  -> Eff eff (Readable chunktype r eff)
+newReadable = map wrap <<< newReadableImpl
+
+foreign import newReadableImpl
+  :: forall chunktype r p eff
+   . ReadCb chunktype r p eff
+  -> Eff eff (S.Readable r eff)
+
+push
+  :: forall chunktype r p eff
+   . Readable chunktype r eff
+  -> chunktype
   -> Eff (push :: Push p | eff) Boolean
+push r = pushImpl (unwrap r)
 
-foreign import pushUint8Array
-  :: forall r p eff
-   . Readable r eff
-  -> Uint8Array
-  -> Eff (push :: Push p | eff) Boolean
-
-foreign import pushString
-  :: forall r p eff
-   . Readable r eff
-  -> String
+foreign import pushImpl
+  :: forall chunktype r p eff
+   . S.Readable r eff
+  -> chunktype
   -> Eff (push :: Push p | eff) Boolean
 
 pushStringWithEncoding
   :: forall r p eff
-   . Readable r eff
+   . Readable String r eff
   -> String
   -> Encoding
   -> Eff (push :: Push p | eff) Boolean
-pushStringWithEncoding rs s = pushStringWithEncodingImpl rs s <<< show
+pushStringWithEncoding rs s = pushStringWithEncodingImpl (unwrap rs) s <<< show
 
 foreign import pushStringWithEncodingImpl
   :: forall r p eff
-   . Readable r eff
+   . S.Readable r eff
   -> String
   -> String
   -> Eff (push :: Push p | eff) Boolean
 
-foreign import pushEnd :: forall p eff. Eff (push :: Push p | eff) Unit
+pushEnd
+  :: forall chunktype r p eff
+   . Readable chunktype r eff
+  -> Eff (push :: Push p | eff) Unit
+pushEnd = pushEndImpl <<< unwrap
+
+foreign import pushEndImpl
+  :: forall r p eff
+   . S.Readable r eff
+  -> Eff (push :: Push p | eff) Unit
+
+pipe
+  :: forall chunktype w r eff
+   . Readable chunktype w eff
+  -> S.Writable r eff
+  -> Eff eff (S.Writable r eff)
+pipe r = S.pipe $ unwrap r
