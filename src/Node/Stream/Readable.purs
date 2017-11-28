@@ -11,6 +11,8 @@ module Node.Stream.Readable (
 , repeat'
 , iterate
 , iterate'
+, unfoldr
+, unfoldr'
 , push
 , pushStringWithEncoding
 , pushEnd
@@ -24,8 +26,10 @@ import Control.Monad.Eff.Exception (Error)
 import Control.Monad.Eff.Ref (REF, newRef, readRef, writeRef)
 import Data.ArrayBuffer.Types (ArrayView, Uint8)
 import Data.Function.Uncurried (Fn2)
+import Data.Functor (voidRight)
+import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), swap)
 import Node.Buffer (Buffer)
 import Node.Encoding (Encoding)
 import Node.Stream (Readable, Writable, pipe) as S
@@ -112,14 +116,34 @@ iterate'
   -> (iterstate -> Tuple iterstate chunktype)
   -> iterstate
   -> Eff (ref :: REF | eff) (Readable chunktype r (ref :: REF | eff))
-iterate' opts iter startState = do
+iterate' opts iter = unfoldr' opts $ Just <<< swap <<< iter
+
+unfoldr
+  :: forall chunktype iterstate r eff
+   . Chunkable chunktype
+  => (iterstate -> Maybe (Tuple chunktype iterstate))
+  -> iterstate
+  -> Eff (ref :: REF | eff) (Readable chunktype r (ref :: REF | eff))
+unfoldr = unfoldr' {}
+
+unfoldr'
+  :: forall optionsrow rest chunktype iterstate r eff
+   . Union optionsrow rest (StreamOptions (ref :: REF | eff))
+  => Chunkable chunktype
+  => { | optionsrow}
+  -> (iterstate -> Maybe (Tuple chunktype iterstate))
+  -> iterstate
+  -> Eff (ref :: REF | eff) (Readable chunktype r (ref :: REF | eff))
+unfoldr' opts iter startState = do
   iterStateRef <- newRef startState
   newReadable' opts
     $ \strm _ -> untilE do
       iterState <- readRef iterStateRef
-      let (Tuple newState chunk) = iter iterState
-      writeRef iterStateRef newState
-      not <$> push strm chunk
+      case iter iterState of
+        Nothing -> voidRight true $ pushEnd strm
+        Just (Tuple chunk newState) -> do
+          writeRef iterStateRef newState
+          not <$> push strm chunk
 
 push
   :: forall chunktype r p eff
