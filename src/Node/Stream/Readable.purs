@@ -7,6 +7,8 @@ module Node.Stream.Readable (
 , Push
 , newReadable
 , newReadable'
+, repeat
+, repeat'
 , push
 , pushStringWithEncoding
 , pushEnd
@@ -15,7 +17,7 @@ module Node.Stream.Readable (
 
 import Prelude
 
-import Control.Monad.Eff (Eff, kind Effect)
+import Control.Monad.Eff (Eff, untilE, kind Effect)
 import Control.Monad.Eff.Exception (Error)
 import Data.ArrayBuffer.Types (ArrayView, Uint8)
 import Data.Function.Uncurried (Fn2)
@@ -72,6 +74,23 @@ foreign import newReadableImpl
    . { | optionsrow}
   -> ReadCb chunktype r p eff
   -> Eff eff (S.Readable r eff)
+
+repeat
+  :: forall chunktype r eff
+   . Chunkable chunktype
+  => chunktype
+  -> Eff eff (Readable chunktype r eff)
+repeat = repeat' {}
+
+repeat'
+  :: forall optionsrow rest chunktype r eff
+   . Union optionsrow rest (StreamOptions eff)
+  => Chunkable chunktype
+  => { | optionsrow}
+  -> chunktype
+  -> Eff eff (Readable chunktype r eff)
+repeat' opts chunk = newReadable' opts
+  $ \strm _ -> untilE $ not <$> push strm chunk
 
 push
   :: forall chunktype r p eff

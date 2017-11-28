@@ -2,17 +2,12 @@ module Yes where
 
 import Prelude
 
-import Control.Monad.Eff (Eff, untilE)
+import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
 import Node.Stream (Writable)
-import Node.Stream.Readable (ReadCb, newReadable, push, pipe)
+import Node.Stream.Readable (repeat, pipe)
 
 foreign import stdout :: forall eff. Writable () (console :: CONSOLE | eff)
 
-repeatCb :: forall r p eff. String -> ReadCb String r p eff
-repeatCb str stream _ = untilE $ not <$> push stream str
-
 main :: forall eff. Eff (console :: CONSOLE | eff) Unit
-main = do
-  readable <- newReadable $ repeatCb "yes\n"
-  void $ readable `pipe` stdout
+main = void $ repeat "yes\n" >>= (_ `pipe` stdout)
