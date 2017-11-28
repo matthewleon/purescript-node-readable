@@ -6,7 +6,7 @@ import Control.Monad.Eff (Eff, untilE)
 import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.ST (ST, STRef, modifySTRef, newSTRef, runST)
 import Node.Stream (Writable)
-import Node.Stream.Readable (ReadCb, newStringReadable, push, pipe)
+import Node.Stream.Readable (ReadCb, newReadable, push, pipe)
 
 foreign import stdout :: forall eff. Writable () (console :: CONSOLE | eff)
 
@@ -19,7 +19,7 @@ incrementCb countRef stream _ =
 startCounting :: forall eff. Int -> Eff (console :: CONSOLE | eff) Unit
 startCounting startCount = runST do
   countRef <- newSTRef startCount
-  readable <- newStringReadable $ incrementCb countRef
+  readable <- newReadable $ incrementCb countRef
   void $ readable `pipe` stdout
 
 main :: forall eff. Eff (console :: CONSOLE | eff) Unit

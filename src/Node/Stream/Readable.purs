@@ -1,15 +1,12 @@
 module Node.Stream.Readable (
   Readable
 , kind Region
+, class Chunkable
 , ReadCb
 , Size
 , Push
-, newStringReadable
-, newStringReadable'
-, newBufferReadable
-, newBufferReadable'
-, newUint8ArrayReadable
-, newUint8ArrayReadable'
+, newReadable
+, newReadable'
 , push
 , pushStringWithEncoding
 , pushEnd
@@ -20,7 +17,7 @@ import Prelude
 
 import Control.Monad.Eff (Eff, kind Effect)
 import Control.Monad.Eff.Exception (Error)
-import Data.ArrayBuffer.Types (Uint8Array)
+import Data.ArrayBuffer.Types (ArrayView, Uint8)
 import Data.Function.Uncurried (Fn2)
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Node.Buffer (Buffer)
@@ -49,55 +46,26 @@ type StreamOptions eff = (
 , destroy :: Fn2 Error (Eff eff Unit) (Eff eff Unit)
 )
 
-newStringReadable
-  :: forall r p eff
-   . ReadCb String r p eff
-  -> Eff eff (Readable String r eff)
-newStringReadable = newReadable {}
-
-newStringReadable'
-  :: forall optionsrow rest r p eff
-   . Union optionsrow rest (StreamOptions eff)
-  => { | optionsrow}
-  -> ReadCb String r p eff
-  -> Eff eff (Readable String r eff)
-newStringReadable' = newReadable
-
-newBufferReadable
-  :: forall r p eff
-   . ReadCb Buffer r p eff
-  -> Eff eff (Readable Buffer r eff)
-newBufferReadable = newReadable {}
-
-newBufferReadable'
-  :: forall optionsrow rest r p eff
-   . Union optionsrow rest (StreamOptions eff)
-  => { | optionsrow}
-  -> ReadCb Buffer r p eff
-  -> Eff eff (Readable Buffer r eff)
-newBufferReadable' = newReadable
-
-newUint8ArrayReadable
-  :: forall r p eff
-   . ReadCb Uint8Array r p eff
-  -> Eff eff (Readable Uint8Array r eff)
-newUint8ArrayReadable = newReadable {}
-
-newUint8ArrayReadable'
-  :: forall optionsrow rest r p eff
-   . Union optionsrow rest (StreamOptions eff)
-  => { | optionsrow}
-  -> ReadCb Uint8Array r p eff
-  -> Eff eff (Readable Uint8Array r eff)
-newUint8ArrayReadable' = newReadable
+class Chunkable t
+instance chunkableString :: Chunkable String
+instance chunkableBuffer :: Chunkable Buffer
+instance chunkableUint8Array :: Chunkable (ArrayView Uint8)
 
 newReadable
+  :: forall chunktype r p eff
+   . Chunkable chunktype
+  => ReadCb chunktype r p eff
+  -> Eff eff (Readable chunktype r eff)
+newReadable = map wrap <<< newReadableImpl {}
+
+newReadable'
   :: forall optionsrow rest chunktype r p eff
    . Union optionsrow rest (StreamOptions eff)
+  => Chunkable chunktype
   => { | optionsrow}
   -> ReadCb chunktype r p eff
   -> Eff eff (Readable chunktype r eff)
-newReadable r = map wrap <<< newReadableImpl r
+newReadable' r = map wrap <<< newReadableImpl r
 
 foreign import newReadableImpl
   :: forall optionsrow chunktype r p eff
