@@ -34,5 +34,5 @@ exports.pushStringWithEncodingImpl = function (rs) {
 };
 
 exports.pushEndImpl = function(rs) {
-  exports.pushImpl(rs)(null);
+  return exports.pushImpl(rs)(null);
 };
