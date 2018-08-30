@@ -7,7 +7,7 @@ See the `examples` directory for usage examples.
 ## Installation
 
 ```
-bower install purescript-node-streams
+bower install purescript-node-readable
 ```
 
 ## Documentation
