@@ -8,9 +8,9 @@
     "examples:count": "eslint examples && pulp run -I examples -m Count"
   },
   "devDependencies": {
-    "eslint": "^4.11.0",
+    "eslint": "^5.4.0",
     "pulp": "^12.0.1",
-    "purescript-psa": "^0.5.1",
+    "purescript-psa": "^0.7.3",
     "rimraf": "^2.6.2",
     "stream-buffers": "^3.0.1"
   }
