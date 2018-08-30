@@ -1,10 +1,8 @@
 module Node.Stream.Readable (
   Readable
-, kind Region
 , class Chunkable
 , ReadCb
 , Size
-, Push
 , newReadable
 , newReadable'
 , repeat
@@ -21,39 +19,35 @@ module Node.Stream.Readable (
 
 import Prelude
 
-import Control.Monad.Eff (Eff, untilE, kind Effect)
-import Control.Monad.Eff.Exception (Error)
-import Control.Monad.Eff.Ref (REF, newRef, readRef, writeRef)
 import Data.ArrayBuffer.Types (ArrayView, Uint8)
 import Data.Function.Uncurried (Fn2)
 import Data.Functor (voidRight)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Tuple (Tuple(..), swap)
+import Effect (Effect, untilE)
+import Effect.Exception (Error)
+import Effect.Ref as Ref
 import Node.Buffer (Buffer)
 import Node.Encoding (Encoding)
 import Node.Stream (Readable, Writable, pipe) as S
+import Prim.Row (class Union)
 
 -- | A readable stream parameterized by the type of its chunks
-newtype Readable chunktype r eff = Readable (S.Readable r eff)
-derive instance newtypeReadable :: Newtype (Readable chunktype r eff) _
-
-foreign import kind Region
-
--- | We use a phantom parameter to contain use of `push`
-foreign import data Push :: Region -> Effect
+newtype Readable chunktype r = Readable (S.Readable r)
+derive instance newtypeReadable :: Newtype (Readable chunktype r) _
 
 type Size = Int
 
 -- | The read callback for readable streams
-type ReadCb chunktype r p eff
-   = Readable chunktype r eff
+type ReadCb chunktype r
+   = Readable chunktype r
   -> Size
-  -> Eff (push :: Push p | eff) Unit
+  -> Effect Unit
 
-type StreamOptions eff = (
+type StreamOptions = (
   highWaterMark :: Int
-, destroy :: Fn2 Error (Eff eff Unit) (Eff eff Unit)
+, destroy :: Fn2 Error (Effect Unit) (Effect Unit)
 )
 
 class Chunkable t
@@ -62,131 +56,109 @@ instance chunkableBuffer :: Chunkable Buffer
 instance chunkableUint8Array :: Chunkable (ArrayView Uint8)
 
 newReadable
-  :: forall chunktype r p eff
+  :: forall chunktype r
    . Chunkable chunktype
-  => ReadCb chunktype r p eff
-  -> Eff eff (Readable chunktype r eff)
+  => ReadCb chunktype r -> Effect (Readable chunktype r)
 newReadable = map wrap <<< newReadableImpl {}
 
 newReadable'
-  :: forall optionsrow rest chunktype r p eff
-   . Union optionsrow rest (StreamOptions eff)
+  :: forall optionsrow rest chunktype r
+   . Union optionsrow rest StreamOptions
   => Chunkable chunktype
-  => { | optionsrow}
-  -> ReadCb chunktype r p eff
-  -> Eff eff (Readable chunktype r eff)
+  => { | optionsrow} -> ReadCb chunktype r -> Effect (Readable chunktype r)
 newReadable' r = map wrap <<< newReadableImpl r
 
 foreign import newReadableImpl
-  :: forall optionsrow chunktype r p eff
-   . { | optionsrow}
-  -> ReadCb chunktype r p eff
-  -> Eff eff (S.Readable r eff)
+  :: forall optionsrow chunktype r
+   . { | optionsrow} -> ReadCb chunktype r -> Effect (S.Readable r)
 
 repeat
-  :: forall chunktype r eff
+  :: forall chunktype r
    . Chunkable chunktype
-  => chunktype
-  -> Eff eff (Readable chunktype r eff)
+  => chunktype -> Effect (Readable chunktype r)
 repeat = repeat' {}
 
 repeat'
-  :: forall optionsrow rest chunktype r eff
-   . Union optionsrow rest (StreamOptions eff)
+  :: forall optionsrow rest chunktype r
+   . Union optionsrow rest StreamOptions
   => Chunkable chunktype
-  => { | optionsrow}
-  -> chunktype
-  -> Eff eff (Readable chunktype r eff)
+  => { | optionsrow} -> chunktype -> Effect (Readable chunktype r)
 repeat' opts chunk = newReadable' opts
   $ \strm _ -> untilE $ not <$> push strm chunk
 
 iterate
-  :: forall chunktype iterstate r eff
+  :: forall chunktype iterstate r
    . Chunkable chunktype
   => (iterstate -> Tuple iterstate chunktype)
   -> iterstate
-  -> Eff (ref :: REF | eff) (Readable chunktype r (ref :: REF | eff))
+  -> Effect (Readable chunktype r)
 iterate = iterate' {}
 
 iterate'
-  :: forall optionsrow rest chunktype iterstate r eff
-   . Union optionsrow rest (StreamOptions (ref :: REF | eff))
+  :: forall optionsrow rest chunktype iterstate r
+   . Union optionsrow rest StreamOptions
   => Chunkable chunktype
   => { | optionsrow}
   -> (iterstate -> Tuple iterstate chunktype)
   -> iterstate
-  -> Eff (ref :: REF | eff) (Readable chunktype r (ref :: REF | eff))
+  -> Effect (Readable chunktype r)
 iterate' opts iter = unfoldr' opts $ Just <<< swap <<< iter
 
 unfoldr
-  :: forall chunktype iterstate r eff
+  :: forall chunktype iterstate r
    . Chunkable chunktype
   => (iterstate -> Maybe (Tuple chunktype iterstate))
   -> iterstate
-  -> Eff (ref :: REF | eff) (Readable chunktype r (ref :: REF | eff))
+  -> Effect (Readable chunktype r)
 unfoldr = unfoldr' {}
 
 unfoldr'
-  :: forall optionsrow rest chunktype iterstate r eff
-   . Union optionsrow rest (StreamOptions (ref :: REF | eff))
+  :: forall optionsrow rest chunktype iterstate r
+   . Union optionsrow rest StreamOptions
   => Chunkable chunktype
   => { | optionsrow}
   -> (iterstate -> Maybe (Tuple chunktype iterstate))
   -> iterstate
-  -> Eff (ref :: REF | eff) (Readable chunktype r (ref :: REF | eff))
+  -> Effect (Readable chunktype r)
 unfoldr' opts iter startState = do
-  iterStateRef <- newRef startState
+  iterStateRef <- Ref.new startState
   newReadable' opts
     $ \strm _ -> untilE do
-      iterState <- readRef iterStateRef
+      iterState <- Ref.read iterStateRef
       case iter iterState of
         Nothing -> voidRight true $ pushEnd strm
         Just (Tuple chunk newState) -> do
-          writeRef iterStateRef newState
+          Ref.write newState iterStateRef
           not <$> push strm chunk
 
 push
-  :: forall chunktype r p eff
-   . Readable chunktype r eff
-  -> chunktype
-  -> Eff (push :: Push p | eff) Boolean
+  :: forall chunktype r
+   . Readable chunktype r -> chunktype -> Effect Boolean
 push r = pushImpl (unwrap r)
 
 foreign import pushImpl
-  :: forall chunktype r p eff
-   . S.Readable r eff
-  -> chunktype
-  -> Eff (push :: Push p | eff) Boolean
+  :: forall chunktype r
+   . S.Readable r -> chunktype -> Effect Boolean
 
 pushStringWithEncoding
-  :: forall r p eff
-   . Readable String r eff
-  -> String
-  -> Encoding
-  -> Eff (push :: Push p | eff) Boolean
+  :: forall r
+   . Readable String r -> String -> Encoding -> Effect Boolean
 pushStringWithEncoding rs s = pushStringWithEncodingImpl (unwrap rs) s <<< show
 
 foreign import pushStringWithEncodingImpl
-  :: forall r p eff
-   . S.Readable r eff
-  -> String
-  -> String
-  -> Eff (push :: Push p | eff) Boolean
+  :: forall r
+   . S.Readable r -> String -> String -> Effect Boolean
 
 pushEnd
-  :: forall chunktype r p eff
-   . Readable chunktype r eff
-  -> Eff (push :: Push p | eff) Unit
+  :: forall chunktype r
+   . Readable chunktype r -> Effect Unit
 pushEnd = pushEndImpl <<< unwrap
 
 foreign import pushEndImpl
-  :: forall r p eff
-   . S.Readable r eff
-  -> Eff (push :: Push p | eff) Unit
+  :: forall r
+   . S.Readable r -> Effect Unit
 
 pipe
-  :: forall chunktype w r eff
-   . Readable chunktype w eff
-  -> S.Writable r eff
-  -> Eff eff (S.Writable r eff)
+  :: forall chunktype w r
+   . Readable chunktype w -> S.Writable r -> Effect (S.Writable r)
 pipe r = S.pipe $ unwrap r
