@@ -12,17 +12,17 @@
     "url": "git://github.com/matthewleon/purescript-node-readable.git"
   },
   "dependencies": {
-    "purescript-node-streams": "^3.2.0",
+    "purescript-node-streams": "^4.0.0",
     "purescript-arraybuffer-types": "^2.0.0",
-    "purescript-newtype": "^2.0.0",
-    "purescript-record": "^0.2.5",
-    "purescript-exceptions": "^3.1.0",
-    "purescript-functions": "^3.0.0",
-    "purescript-foldable-traversable": "^3.6.1",
-    "purescript-refs": "^3.0.0",
-    "purescript-tuples": "^4.1.0"
+    "purescript-newtype": "^3.0.0",
+    "purescript-record": "^1.0.0",
+    "purescript-exceptions": "^4.0.0",
+    "purescript-functions": "^4.0.0",
+    "purescript-foldable-traversable": "^4.0.0",
+    "purescript-refs": "^4.1.0",
+    "purescript-tuples": "^5.0.0"
   },
   "devDependencies": {
-    "purescript-console": "^3.0.0"
+    "purescript-console": "^4.1.0"
   }
 }
