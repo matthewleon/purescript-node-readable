@@ -4,10 +4,8 @@ import Prelude
 
 import Effect (Effect)
 import Data.Tuple (Tuple(..))
-import Node.Stream (Writable)
+import Node.Process (stdout)
 import Node.Stream.Readable (iterate, pipe)
-
-foreign import stdout :: Writable ()
 
 main :: Effect Unit
 main = void

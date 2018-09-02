@@ -23,6 +23,7 @@
     "purescript-tuples": "^5.0.0"
   },
   "devDependencies": {
-    "purescript-console": "^4.1.0"
+    "purescript-console": "^4.1.0",
+    "purescript-node-process": "^6.0.0"
   }
 }

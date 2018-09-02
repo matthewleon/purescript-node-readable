@@ -3,12 +3,11 @@
   "scripts": {
     "clean": "rimraf output && rimraf .pulp-cache",
     "build": "eslint src && pulp build -- --censor-lib --strict",
-    "examples:build": "eslint examples && pulp build -I examples -- --censor-lib --strict",
-    "examples:yes": "eslint examples && pulp run -I examples -m Yes",
-    "examples:count": "eslint examples && pulp run -I examples -m Count"
+    "examples:build": "pulp build -I examples -- --censor-lib --strict",
+    "examples:yes": "pulp run -I examples -m Yes",
+    "examples:count": "pulp run -I examples -m Count"
   },
   "devDependencies": {
-    "eslint": "^5.4.0",
     "pulp": "^12.0.1",
     "purescript-psa": "^0.7.3",
     "rimraf": "^2.6.2",
