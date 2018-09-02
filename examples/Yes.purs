@@ -2,12 +2,11 @@ module Yes where
 
 import Prelude
 
-import Control.Monad.Eff (Eff)
-import Control.Monad.Eff.Console (CONSOLE)
+import Effect (Effect)
 import Node.Stream (Writable)
 import Node.Stream.Readable (repeat, pipe)
 
-foreign import stdout :: forall eff. Writable () (console :: CONSOLE | eff)
+foreign import stdout :: Writable ()
 
-main :: forall eff. Eff (console :: CONSOLE | eff) Unit
+main :: Effect Unit
 main = void $ repeat "yes\n" >>= (_ `pipe` stdout)
